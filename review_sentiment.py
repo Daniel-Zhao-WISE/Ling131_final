@@ -7,6 +7,7 @@ from nltk.corpus import movie_reviews
 from nltk.corpus import stopwords
 from sklearn.model_selection import KFold
 
+
 class ReviewSentiment:
     def __init__(self, labeled_data=[], features=[], train_set=[], test_set=[], train_size=1000, feature_size=0):
         self.stop_words = set(stopwords.words('english'))
