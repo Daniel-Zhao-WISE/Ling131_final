@@ -1,7 +1,5 @@
-import nltk
 import random
 from nltk.corpus import movie_reviews
-from sklearn.svm import LinearSVC
 from review_sentiment import ReviewSentiment
 import classification
 

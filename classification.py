@@ -1,6 +1,7 @@
 import nltk
 import pickle
 import random
+import os
 from nltk.corpus import movie_reviews
 from sklearn.svm import LinearSVC
 from review_sentiment import ReviewSentiment
@@ -52,8 +53,11 @@ if __name__ == '__main__':
             classifiers.append(pickle.load(f))
     except IOError:
         classifiers = train(rs)
-        with open('cache/classifier/NB.dat', 'wb') as f:
+        dir = 'cache/classifier/'
+        if not os.path.exists():
+            os.makedirs(dir)
+        with open(dir + 'NB.dat', 'wb') as f:
             pickle.dump(classifiers[0], f, True)
-        with open('cache/classifier/SVM.dat', 'wb') as f:
+        with open(dir + 'SVM.dat', 'wb') as f:
             pickle.dump(classifiers[1], f, True)
     evaluate(rs, classifiers)
