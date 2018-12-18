@@ -1,15 +1,14 @@
 import nltk
 import string
-import random
 import pickle
 import numpy as np
-from nltk.corpus import movie_reviews
+import os
 from nltk.corpus import stopwords
 from sklearn.model_selection import KFold
 
 
 class ReviewSentiment:
-    def __init__(self, labeled_data=[], features=[], train_set=[], test_set=[], train_size=1000, feature_size=0):
+    def __init__(self, labeled_data, features=[], train_set=[], test_set=[], train_size=1000):
         self.stop_words = set(stopwords.words('english'))
         self.negation_words = {'no', 'not', 'none', 'nobody', 'nothing', 'neither', 'nowhere', 'never', 'hardly',
                                'scarcely', 'barely', "n't"}
@@ -18,7 +17,8 @@ class ReviewSentiment:
         self.train_set = train_set
         self.test_set = test_set
         self.train_size = train_size
-        self.feature_size = feature_size
+        if not self.features:
+            self._create_feature_sets()
 
     def generate_unigram(self, raw):
         unigram_raw = []
@@ -47,27 +47,14 @@ class ReviewSentiment:
                     negation = 'NEG-'
         return PoS_raw
 
-    def _create_labeled_data(self):
-        # create labeled data
-        self.labeled_data = [(movie_reviews.raw(fileids=fileid), movie_reviews.categories(fileid)[0])
-                             for fileid in movie_reviews.fileids()]
-
     def _generate_features(self):
-        def FreqDist_most_common(object, n):
-            if n == 0:
-                return nltk.FreqDist(object).most_common()
-            else:
-                return nltk.FreqDist(object).most_common(n)
-
-        if not self.labeled_data:
-            self._create_labeled_data()
         unigram_raw = []
         bigrams_raw = []
         for unigram in [self.generate_unigram(raw) for raw, sentiment in self.labeled_data]:
             unigram_raw.extend(unigram)
             bigrams_raw.extend(self.generate_bigrams(unigram))
         self.features.append(
-            [word for word, times in FreqDist_most_common(unigram_raw, self.feature_size) if times > 5])
+            [word for word, times in nltk.FreqDist(unigram_raw).most_common() if times > 5])
         print('unigram # of features: %d' % (len(self.features[0])))
         self.features.append([word for word, times in nltk.FreqDist(bigrams_raw).most_common() if times > 3])
         print('bigrams # of features: %d' % (len(self.features[1])))
@@ -100,8 +87,6 @@ class ReviewSentiment:
                 feature_sets[i].append((feature_set[i], sentiment))
 
         for i in range(6):
-            random.seed(1234)
-            random.shuffle(feature_sets[i])
             self.train_set.append(feature_sets[i][:self.train_size])
             self.test_set.append(feature_sets[i][self.train_size:])
 
@@ -128,9 +113,6 @@ class ReviewSentiment:
         return features
 
     def train_classifier(self, classifier, i, n):
-        if not self.train_set:
-            self._create_feature_sets()
-
         # create the classifier
         kf = KFold(n_splits=n)
         sum = 0
@@ -143,7 +125,7 @@ class ReviewSentiment:
             sum += nltk.classify.accuracy(classifiers.get_classifer(index), test_data)
             index += 1
         average = sum / 3
-        print('Average %d-fold cross validation accuracy of the model of case %d on test_set is %.2f'
+        print('Average %d-fold cross validation accuracy of the model of case %d is %.2f'
               % (n, i + 1, 100 * average))
         return classifiers
 
@@ -159,17 +141,13 @@ class ReviewSentiment:
         classifiers.classify(self.mr_features(raw)[i])
 
     def save(self, dir):
-        if not self.labeled_data:
-            self._create_labeled_data()
-        if not self.features:
-            self._create_feature_sets()
-        with open(dir + '/labeled_data.dat', 'wb') as f:
-            pickle.dump(self.labeled_data, f, True)
-        with open(dir + '/features.dat', 'wb') as f:
+        if not os.path.exists(dir):
+            os.makedirs(dir)
+        with open(dir + 'features.dat', 'wb') as f:
             pickle.dump(self.features, f, True)
-        with open(dir + '/train_set.dat', 'wb') as f:
+        with open(dir + 'train_set.dat', 'wb') as f:
             pickle.dump(self.train_set, f, True)
-        with open(dir + '/test_set.dat', 'wb') as f:
+        with open(dir + 'test_set.dat', 'wb') as f:
             pickle.dump(self.test_set, f, True)
 
 
