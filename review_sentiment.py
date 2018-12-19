@@ -35,7 +35,7 @@ class ReviewSentiment:
     def generate_bigrams(self, unigram_raw):
         return [word1 + ' ' + word2 for word1, word2 in nltk.bigrams(unigram_raw)]
 
-    def generate_PoS(self, raw):
+    def generate_pos(self, raw):
         PoS_raw = []
         for sent in nltk.sent_tokenize(raw):
             negation = ''
@@ -64,7 +64,7 @@ class ReviewSentiment:
         print('unigram + bigrams # of features: %d' % (len(self.features[2])))
         PoS_raw = [item
                    for raw, sentiment in self.labeled_data
-                   for item in self.generate_PoS(raw)]
+                   for item in self.generate_pos(raw)]
         self.features.append(
             [word + '-' + PoS for (word, PoS), times in nltk.FreqDist(PoS_raw).most_common() if times > 5])
         print('unigram + PoS # of features: %d' % (len(self.features[3])))
@@ -96,10 +96,10 @@ class ReviewSentiment:
         unigram = set(unigram)
         unigram_bigrams = set(unigram)
         unigram_bigrams.update(bigrams)
-        unigram_PoS = set(self.generate_PoS(instance))
+        unigram_pos = set(self.generate_pos(instance))
         feature_data = [unigram, bigrams, unigram_bigrams,
-                        {word + '-' + PoS for word, PoS in unigram_PoS},
-                        {word for word, PoS in unigram_PoS if PoS == 'JJ'},
+                        {word + '-' + PoS for word, PoS in unigram_pos},
+                        {word for word, PoS in unigram_pos if PoS == 'JJ'},
                         unigram]
         return [self._create_features(i, feature_data) for i in range(6)]
 
