@@ -54,7 +54,7 @@ if __name__ == '__main__':
     except IOError:
         classifiers = train(rs)
         dir = 'cache/classifier/'
-        if not os.path.exists():
+        if not os.path.exists(dir):
             os.makedirs(dir)
         with open(dir + 'NB.dat', 'wb') as f:
             pickle.dump(classifiers[0], f, True)
