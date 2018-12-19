@@ -28,6 +28,15 @@ def evaluate(rs, classifiers):
         rs.evaluate_classifer(classifier, i)
 
 
+def predict(rs, dir, classifiers, i):
+
+    for i, filename in enumerate(os.listdir(dir)):
+        with open(dir + filename, 'r') as f:
+            text = f.read()
+        print("#%d" % (i+1))
+        rs.predict(text, classifiers, i)
+
+
 if __name__ == '__main__':
     labeled_data = [(movie_reviews.raw(fileids=fileid), movie_reviews.categories(fileid)[0])
                     for fileid in movie_reviews.fileids()]
@@ -60,4 +69,12 @@ if __name__ == '__main__':
             pickle.dump(classifiers[0], f, True)
         with open(dir + 'SVM.dat', 'wb') as f:
             pickle.dump(classifiers[1], f, True)
-    evaluate(rs, classifiers)
+    #evaluate(rs, classifiers)
+
+    classifier = classifiers[1][2]
+    print()
+    print("positive reviews:")
+    predict(rs, "data/positive/", classifier, 2)
+    print()
+    print("negative reviews:")
+    predict(rs, "data/negative/", classifier, 2)
