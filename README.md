@@ -1,4 +1,4 @@
-##Movie Reviews Sentiment Classification
+## Movie Reviews Sentiment Classification
 By Dongyu Zhao (dongyuzhao@brandeis.edu) <br>
 
 To predict the sentiment polarity of a movie review, put that review into a file under
