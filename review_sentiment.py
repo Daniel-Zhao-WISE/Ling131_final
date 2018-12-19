@@ -3,6 +3,7 @@ import string
 import pickle
 import numpy as np
 import os
+import random
 from nltk.corpus import stopwords
 from sklearn.model_selection import KFold
 
@@ -20,7 +21,7 @@ class ReviewSentiment:
         if not self.features:
             self._create_feature_sets()
 
-    def generate_unigram(self, raw):
+    def _generate_unigram(self, raw):
         unigram_raw = []
         for sent in nltk.sent_tokenize(raw):
             negation = ''
@@ -32,27 +33,27 @@ class ReviewSentiment:
                     negation = 'NEG-'
         return unigram_raw
 
-    def generate_bigrams(self, unigram_raw):
+    def _generate_bigrams(self, unigram_raw):
         return [word1 + ' ' + word2 for word1, word2 in nltk.bigrams(unigram_raw)]
 
-    def generate_pos(self, raw):
-        PoS_raw = []
+    def _generate_pos(self, raw):
+        pos_raw = []
         for sent in nltk.sent_tokenize(raw):
             negation = ''
             for word, PoS in nltk.pos_tag(nltk.word_tokenize(sent)):
                 if word not in self.stop_words:
                     if word not in string.punctuation:
-                        PoS_raw.append((negation + word, PoS))
+                        pos_raw.append((negation + word, PoS))
                 if word.lower() in self.negation_words:
                     negation = 'NEG-'
-        return PoS_raw
+        return pos_raw
 
     def _generate_features(self):
         unigram_raw = []
         bigrams_raw = []
-        for unigram in [self.generate_unigram(raw) for raw, sentiment in self.labeled_data]:
+        for unigram in [self._generate_unigram(raw) for raw, sentiment in self.labeled_data]:
             unigram_raw.extend(unigram)
-            bigrams_raw.extend(self.generate_bigrams(unigram))
+            bigrams_raw.extend(self._generate_bigrams(unigram))
         self.features.append(
             [word for word, times in nltk.FreqDist(unigram_raw).most_common() if times > 5])
         print('unigram # of features: %d' % (len(self.features[0])))
@@ -62,13 +63,13 @@ class ReviewSentiment:
         unigram_bigrams.extend(self.features[1])
         self.features.append(unigram_bigrams)
         print('unigram + bigrams # of features: %d' % (len(self.features[2])))
-        PoS_raw = [item
+        pos_raw = [item
                    for raw, sentiment in self.labeled_data
-                   for item in self.generate_pos(raw)]
+                   for item in self._generate_pos(raw)]
         self.features.append(
-            [word + '-' + PoS for (word, PoS), times in nltk.FreqDist(PoS_raw).most_common() if times > 5])
+            [word + '-' + PoS for (word, PoS), times in nltk.FreqDist(pos_raw).most_common() if times > 5])
         print('unigram + PoS # of features: %d' % (len(self.features[3])))
-        adj_raw = [word for word, PoS in PoS_raw if PoS == 'JJ']
+        adj_raw = [word for word, PoS in pos_raw if PoS == 'JJ']
         self.features.append([word for word, times in nltk.FreqDist(adj_raw).most_common() if times > 5])
         print('adj # of features: %d' % (len(self.features[4])))
         self.features.append([word for word, times in nltk.FreqDist(unigram_raw).most_common(len(self.features[4]))])
@@ -82,7 +83,7 @@ class ReviewSentiment:
         feature_sets = [[] for i in range(6)]
 
         for raw, sentiment in self.labeled_data:
-            feature_set = self.mr_features(raw)
+            feature_set = self._mr_features(raw)
             for i in range(6):
                 feature_sets[i].append((feature_set[i], sentiment))
 
@@ -90,13 +91,13 @@ class ReviewSentiment:
             self.train_set.append(feature_sets[i][:self.train_size])
             self.test_set.append(feature_sets[i][self.train_size:])
 
-    def mr_features(self, instance):
-        unigram = self.generate_unigram(instance)
-        bigrams = set(self.generate_bigrams(unigram))
+    def _mr_features(self, instance):
+        unigram = self._generate_unigram(instance)
+        bigrams = set(self._generate_bigrams(unigram))
         unigram = set(unigram)
         unigram_bigrams = set(unigram)
         unigram_bigrams.update(bigrams)
-        unigram_pos = set(self.generate_pos(instance))
+        unigram_pos = set(self._generate_pos(instance))
         feature_data = [unigram, bigrams, unigram_bigrams,
                         {word + '-' + PoS for word, PoS in unigram_pos},
                         {word for word, PoS in unigram_pos if PoS == 'JJ'},
@@ -121,8 +122,8 @@ class ReviewSentiment:
         for train, test in kf.split(self.train_set[i]):
             train_data = np.array(self.train_set[i])[train]
             test_data = np.array(self.train_set[i])[test]
-            classifiers.set_classifer(index, classifier.train(train_data))
-            sum += nltk.classify.accuracy(classifiers.get_classifer(index), test_data)
+            classifiers.set_classifier(index, classifier.train(train_data))
+            sum += nltk.classify.accuracy(classifiers.get_classifier(index), test_data)
             index += 1
         average = sum / 3
         print('Average %d-fold cross validation accuracy of the model of case %d is %.2f'
@@ -138,7 +139,7 @@ class ReviewSentiment:
               % (i + 1, 100 * average))
 
     def predict(self, raw, classifiers, i):
-        classifiers.classify(self.mr_features(raw)[i])
+        return classifiers.classify(self._mr_features(raw)[i])
 
     def save(self, dir):
         if not os.path.exists(dir):
@@ -155,26 +156,12 @@ class Classifiers:
     def __init__(self, n):
         self.classifiers = [None for i in range(n)]
 
-    def set_classifer(self, i, classifier):
+    def set_classifier(self, i, classifier):
         self.classifiers[i] = classifier
 
-    def get_classifer(self, i):
+    def get_classifier(self, i):
         return self.classifiers[i]
 
     def classify(self, feature_set):
-        print('Respective classify results for each classifier:', ' ')
-        pos = 0
-        neg = 0
-        for classifier in self.classifiers:
-            prediction = classifier.classify(feature_set)
-            print(prediction, '\t')
-            if prediction == 'pos':
-                pos += 1
-            else:
-                neg += 1
-        if pos > neg:
-            sentiment = 'positive'
-        else:
-            sentiment = 'negative'
-        print()
-        print('model prediction: ' + sentiment)
+        classifier = random.choice(self.classifiers)
+        return classifier.classify(feature_set)

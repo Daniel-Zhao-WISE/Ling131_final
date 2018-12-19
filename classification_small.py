@@ -11,4 +11,12 @@ if __name__ == '__main__':
     random.shuffle(labeled_data)
     labeled_data = labeled_data[:100]
     rs = ReviewSentiment(labeled_data, train_size=50)
-    classification.evaluate(rs, classification.train(rs))
+    classifiers = classification.train(rs)
+    classification.evaluate(rs, classifiers)
+    classifier = classifiers[0][0]
+    print()
+    print("positive reviews prediction")
+    classification.predict(rs, "data/positive/", classifier, 0)
+    print()
+    print("negative reviews prediction")
+    classification.predict(rs, "data/negative/", classifier, 0)

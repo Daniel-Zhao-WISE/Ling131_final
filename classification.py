@@ -30,11 +30,10 @@ def evaluate(rs, classifiers):
 
 def predict(rs, dir, classifiers, i):
 
-    for i, filename in enumerate(os.listdir(dir)):
+    for filename in os.listdir(dir):
         with open(dir + filename, 'r') as f:
             text = f.read()
-        print("#%d" % (i+1))
-        rs.predict(text, classifiers, i)
+        print(filename + ':\t' + rs.predict(text, classifiers, i))
 
 
 if __name__ == '__main__':
@@ -62,6 +61,7 @@ if __name__ == '__main__':
             classifiers.append(pickle.load(f))
     except IOError:
         classifiers = train(rs)
+        evaluate(rs, classifiers)
         dir = 'cache/classifier/'
         if not os.path.exists(dir):
             os.makedirs(dir)
@@ -69,12 +69,11 @@ if __name__ == '__main__':
             pickle.dump(classifiers[0], f, True)
         with open(dir + 'SVM.dat', 'wb') as f:
             pickle.dump(classifiers[1], f, True)
-    #evaluate(rs, classifiers)
 
     classifier = classifiers[1][2]
     print()
-    print("positive reviews:")
+    print("positive reviews prediction")
     predict(rs, "data/positive/", classifier, 2)
     print()
-    print("negative reviews:")
+    print("negative reviews prediction")
     predict(rs, "data/negative/", classifier, 2)
